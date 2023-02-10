@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Identity.Web;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,14 +13,13 @@ var configuration = configBuilder.Build();
 
 // Adds Microsoft Identity platform (Azure AD B2C) support to protect this Api
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddJwtBearer(o =>
+        .AddMicrosoftIdentityWebApi(o =>
         {
-            o.Audience = configuration["AzureAdB2C:ClientId"];
-            o.Authority = $"https://login.microsoftonline.com/{configuration["AzureAdB2C:TenantId"]}/v2.0";
-        });
+            builder.Configuration.Bind("AzureAdB2C", o);
+            o.Authority = $"https://login.microsoftonline.com/common/v2.0";
+        },
+        options => { builder.Configuration.Bind("AzureAdB2C", options); });
 // End of the Microsoft Identity platform block    
-
-// Add services to the container.
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -33,11 +33,11 @@ builder.Services.AddSwaggerGen(c =>
         {
             Implicit = new OpenApiOAuthFlow()
             {
-                AuthorizationUrl = new Uri($"https://login.microsoftonline.com/{configuration["AzureAdB2C:TenantId"]}/oauth2/v2.0/authorize"),
-                TokenUrl = new Uri($"https://login.microsoftonline.com/{configuration["AzureAdB2C:TenantId"]}/oauth2/v2.0/token"),
+                AuthorizationUrl = new Uri($"https://login.microsoftonline.com/common/oauth2/v2.0/authorize"),
+                TokenUrl = new Uri($"https://login.microsoftonline.com/common/oauth2/v2.0/token"),
                 Scopes = new Dictionary<string, string> {
                     {
-                        $"https://{configuration["AzureAdB2C:Domain"]}/{configuration["AzureAdB2C:ClientId"]}/access_as_user","Access POCService"
+                        $"{configuration["AzureAdB2C:Scope"]}","Scope POCService"
                     }
                 }
             }
@@ -51,10 +51,10 @@ builder.Services.AddSwaggerGen(c =>
                         {
                             Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "oauth2" }
                         },
-                        new[] { $"https://{configuration["AzureAdB2C:Domain"]}/{configuration["AzureAdB2C:ClientId"]}/access_as_user" }
+                        new[] { $"{configuration["AzureAdB2C:Scope"]}"}
                     }
     });
-    
+
 });
 
 var app = builder.Build();
@@ -67,6 +67,10 @@ if (app.Environment.IsDevelopment())
     {
         options.OAuthClientId(configuration["AzureAdB2C:ClientId"]);
     });
+}
+else
+{
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();
