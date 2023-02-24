@@ -1,4 +1,4 @@
-# WebAPI-Core-.NET7
+# .NETCoreAPI-AzureB2C-Authentication
 .NET 7 WebAPI with authentication using AzureB2C and Swagger documentation 
 
 
